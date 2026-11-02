@@ -9,21 +9,21 @@ export class GoalStation extends Station {
     this.user = person(COL.cyan); this.user.position.set(-5, 0, 0.6); this.user.rotation.y = 0.5; g.add(this.user);
 
     // question panel
-    this.qPanel = new THREE.Mesh(roundedBox(3.2, 1.25, 0.12, 0.16), frost(0x9fe9ff, 0.22, { emissive: COL.cyan, ei: 0.15 }));
+    this.qPanel = new THREE.Mesh(roundedBox(3.2, 1.25, 0.12, 0.16), frost(0x5b6470, 0.5));
     this.qPanel.position.set(-3.3, 3.35, 0.4); g.add(this.qPanel);
-    this.qPanel.add(edgeLines(this.qPanel.geometry, COL.cyan, 2.2, 0.55));
+    this.qPanel.add(edgeLines(this.qPanel.geometry, COL.cyan, 1, 0.5));
     this.qLbl = this.addLabel('What’s the <b>timely-filing limit</b> for out-of-network claims?', 'bubble cyan', [0, 0, 0.1], this.qPanel);
 
     // RAG agent core
     this.core = new THREE.Group(); this.core.position.set(0.6, 2.3, 0); g.add(this.core);
     this.shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25, 0), glass(0xffd9c9, { thickness: 1.2, roughness: 0.05, tint: 0xff8a5c, att: 1.6 }));
     this.core.add(this.shell);
-    this.shellEdges = edgeLines(this.shell.geometry, COL.amber, 2.4, 0.8); this.core.add(this.shellEdges);
-    this.heart = new THREE.Mesh(new THREE.IcosahedronGeometry(0.48, 2), glow(COL.lava, 3.2)); this.core.add(this.heart);
-    this.halo = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 16), glowT(COL.ember, 0.9, 0.18)); this.core.add(this.halo);
+    this.shellEdges = edgeLines(this.shell.geometry, COL.amber, 1, 0.5); this.core.add(this.shellEdges);
+    this.heart = new THREE.Mesh(new THREE.IcosahedronGeometry(0.48, 2), glow(COL.lava, 2)); this.core.add(this.heart);
+    this.halo = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 16), glowT(COL.ember, 0.6, 0.1)); this.core.add(this.halo);
     this.rings = [];
     for (let i = 0; i < 3; i++) {
-      const r = new THREE.Mesh(new THREE.TorusGeometry(1.75 + i * 0.28, 0.018, 8, 160), glow(i === 1 ? COL.amber : COL.lava, 2.6));
+      const r = new THREE.Mesh(new THREE.TorusGeometry(1.75 + i * 0.28, 0.018, 8, 160), metal(i === 1 ? 0x8a8f99 : 0x6b6f78, 0.8, 0.35));
       r.rotation.set(Math.PI / 2 + (i - 1) * 0.45, i * 0.6, 0); this.core.add(r); this.rings.push(r);
     }
     // orbiting docs = "your PDFs"
@@ -32,9 +32,9 @@ export class GoalStation extends Station {
     this.addLabel('RAG agent', 'lava big', [0, -2.05, 0], this.core);
 
     // answer panel
-    this.aPanel = new THREE.Mesh(roundedBox(3.3, 1.35, 0.12, 0.16), frost(0xffd2b8, 0.22, { emissive: COL.ember, ei: 0.2 }));
+    this.aPanel = new THREE.Mesh(roundedBox(3.3, 1.35, 0.12, 0.16), frost(0x6b5a52, 0.5));
     this.aPanel.position.set(4.9, 3.1, 0.4); g.add(this.aPanel);
-    this.aPanel.add(edgeLines(this.aPanel.geometry, COL.amber, 2.2, 0.6));
+    this.aPanel.add(edgeLines(this.aPanel.geometry, COL.amber, 1, 0.5));
     this.aLbl = this.addLabel('<b>90 days</b> from date of service <span class="cite">§4.2</span><span class="cite">p.7</span>', 'bubble lava', [0, 0, 0.1], this.aPanel);
 
     // citation chips
@@ -42,13 +42,18 @@ export class GoalStation extends Station {
     this.citeBeams = [0, 1].map(() => { const b = new Beam(COL.amber, 0.014, 3); g.add(b.mesh); return b; });
 
     // travelling orbs
-    this.qOrb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 12), glow(COL.cyan, 4)); g.add(this.qOrb);
-    this.aOrb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 12), glow(COL.amber, 4)); g.add(this.aOrb);
+    this.qOrb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 12), glow(COL.cyan, 2)); g.add(this.qOrb);
+    this.aOrb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 12), glow(COL.amber, 2)); g.add(this.aOrb);
     this.curveQ = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-3.3, 2.7, 0.4), new THREE.Vector3(-1.6, 4.4, 0.6), new THREE.Vector3(0.6, 2.3, 0));
     this.curveA = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.6, 2.3, 0), new THREE.Vector3(2.8, 4.6, 0.6), new THREE.Vector3(4.9, 3.1, 0.4));
     this.sQ = new Stream(this.curveQ, 40, COL.cyan, 0.12, 0.45); g.add(this.sQ.points);
     this.sA = new Stream(this.curveA, 40, COL.amber, 0.12, 0.45); g.add(this.sA.points);
     this._v = new THREE.Vector3();
+    this.pick(this.user, 'analyst', [0, 1.95, 0]);
+    this.pick(this.qPanel, 'question', [1.75, 0.7, 0.1]);
+    this.pick(this.core, 'ragAgent', [1.3, 1.35, 0]);
+    this.pick(this.aPanel, 'answer', [1.8, 0.75, 0.1]);
+    this.cites.forEach((c, i) => this.pick(c, 'citation', i ? null : [0, 0.48, 0.05]));
   }
   update(t, time) {
     // question pops

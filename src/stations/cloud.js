@@ -17,27 +17,27 @@ export function makeCloud(n = 300, seed = 11) {
     pts.push({ p, c });
   }
   const geo = new THREE.IcosahedronGeometry(0.065, 1);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.42, metalness: 0.1, emissive: 0x000000 });
   const mesh = new THREE.InstancedMesh(geo, mat, n);
   const col = new THREE.Color();
-  pts.forEach((pt, i) => { col.set(CLUSTER[pt.c]).multiplyScalar(2.4); mesh.setColorAt(i, col); });
+  pts.forEach((pt, i) => { col.set(CLUSTER[pt.c]); mesh.setColorAt(i, col); });
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   // nebula halos
   const halos = new THREE.Group();
   CENTERS.forEach((c, i) => {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: new THREE.Color(CLUSTER[i]).multiplyScalar(0.9), transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: CLUSTER[i], transparent: true, opacity: 0.08, depthWrite: false }));
     s.position.copy(c); s.scale.setScalar(2.6); halos.add(s);
   });
   return { pts, mesh, halos };
 }
 
 // cube frame + axis ticks for a vector space
-export function spaceFrame(size = 6.4, color = 0x6c7aa8) {
+export function spaceFrame(size = 6.4, color = 0x7d828c) {
   const g = new THREE.Group();
   const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size)), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 }));
   g.add(box);
   const grid = new THREE.GridHelper(size, 8, color, color); grid.material.transparent = true; grid.material.opacity = 0.12; grid.position.y = -size / 2; g.add(grid);
   const ax = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-size / 2, -size / 2, -size / 2), new THREE.Vector3(size / 2, -size / 2, -size / 2), new THREE.Vector3(-size / 2, -size / 2, -size / 2), new THREE.Vector3(-size / 2, size / 2, -size / 2), new THREE.Vector3(-size / 2, -size / 2, -size / 2), new THREE.Vector3(-size / 2, -size / 2, size / 2)]);
-  g.add(new THREE.LineSegments(ax, new THREE.LineBasicMaterial({ color: new THREE.Color(0xff8a5c).multiplyScalar(2), transparent: true, opacity: 0.8 })));
+  g.add(new THREE.LineSegments(ax, new THREE.LineBasicMaterial({ color: 0xc97a58, transparent: true, opacity: 0.55 })));
   return g;
 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Station } from './base.js';
-import { COL, glow, glowT, frost, metal, edgeLines, roundedBox, docTexture, seg, bell, E, lerp } from '../helpers.js';
+import { COL, matte, glow, glowT, frost, metal, edgeLines, roundedBox, docTexture, seg, bell, E, lerp } from '../helpers.js';
 
 const COLS = 2, ROWS = 4;
 export class ChunkStation extends Station {
@@ -15,11 +15,11 @@ export class ChunkStation extends Station {
       new THREE.MeshStandardMaterial({ map: docTexture(0), color: 0xb8bccb, emissive: 0xffffff, emissiveMap: docTexture(0), emissiveIntensity: 0.07, envMapIntensity: 0.35, roughness: 0.5 }), metal(0xb9bfce, .6, .1)]);
     this.doc.position.copy(this.docPos); g.add(this.doc);
     // scanner
-    this.scan = new THREE.Mesh(new THREE.BoxGeometry(W * 1.25, 0.05, 0.5), glow(COL.cyan, 4)); g.add(this.scan);
-    this.scanGlow = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.25, 0.9), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    this.scan = new THREE.Mesh(new THREE.BoxGeometry(W * 1.25, 0.05, 0.5), glow(COL.cyan, 2)); g.add(this.scan);
+    this.scanGlow = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.25, 0.9), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, 
       uniforms: { c: { value: new THREE.Color(COL.cyan) } },
       vertexShader: 'varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-      fragmentShader: 'uniform vec3 c; varying vec2 vUv; void main(){ float a = smoothstep(0.,1.,vUv.y)*.55; gl_FragColor = vec4(c*a*1.6, a);}' }));
+      fragmentShader: 'uniform vec3 c; varying vec2 vUv; void main(){ float a = smoothstep(0.,1.,vUv.y)*.22; gl_FragColor = vec4(c, a);}' }));
     g.add(this.scanGlow);
     this.addLabel('ai_parse_document', 'cyan big', [-3, 4.55, 0.3]);
     // layout boxes
@@ -35,8 +35,8 @@ export class ChunkStation extends Station {
       const tex = docTexture(0).clone(); tex.repeat.set(1 / COLS, 1 / ROWS); tex.offset.set(c / COLS, 1 - (r + 1) / ROWS); tex.needsUpdate = true;
       const isTable = r === 2;
       const col = isTable ? COL.cyan : (r === 0 ? COL.lava : COL.amber);
-      const mats = [metal(0x2a3048, .4, .6), metal(0x2a3048, .4, .6), metal(0x2a3048, .4, .6), metal(0x2a3048, .4, .6),
-        new THREE.MeshStandardMaterial({ map: tex, color: 0xb8bccb, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.07, envMapIntensity: 0.35, roughness: 0.5 }), metal(0x2a3048, .4, .6)];
+      const mats = [matte(0x3a3d44, .6), matte(0x3a3d44, .6), matte(0x3a3d44, .6), matte(0x3a3d44, .6),
+        new THREE.MeshStandardMaterial({ map: tex, color: 0xb8bccb, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.07, envMapIntensity: 0.35, roughness: 0.5 }), matte(0x3a3d44, .6)];
       const m = new THREE.Mesh(new THREE.BoxGeometry(cw * 0.97, ch * 0.97, 0.12), mats);
       const edge = edgeLines(m.geometry, col, 3, 1); m.add(edge); m.userData.edge = edge;
       m.userData.home = new THREE.Vector3(this.docPos.x - W / 2 + cw * (c + 0.5), this.docPos.y + H / 2 - ch * (r + 0.5), 0);
@@ -49,6 +49,10 @@ export class ChunkStation extends Station {
     // laser cut lines
     this.cut = new THREE.Mesh(new THREE.BoxGeometry(W * 1.1, 0.03, 0.08), glow(COL.lava, 5)); g.add(this.cut);
     this.cutV = new THREE.Mesh(new THREE.BoxGeometry(0.03, H * 1.08, 0.08), glow(COL.lava, 5)); g.add(this.cutV);
+    this.pick(this.doc, 'pdfPage', [W / 2 + 0.15, -H / 2 + 0.3, 0.1]);
+    this.pick(this.hitBox(2.8, 0.55, 0.3, [-3, 4.55, 0.3]), 'aiParse', [-1.6, 0, 0]);
+    this.pick(this.hitBox(2.6, 0.55, 0.3, [2.4, 5.2, 0.3]), 'aiPrep', [1.5, 0, 0]);
+    this.chunks.forEach((m, i) => this.pick(m, 'chunk', i === 1 ? [0.75, 0.5, 0.1] : null));
   }
   update(t, time) {
     const W = this.W, H = this.H, dp = this.docPos;

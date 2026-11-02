@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Station } from './base.js';
-import { COL, glow, glowT, glass, frost, metal, edgeLines, roundedBox, docTexture, makeDoc, Beam, Stream, seg, bell, E, lerp } from '../helpers.js';
+import { COL, matte, glow, glowT, glass, frost, metal, edgeLines, roundedBox, docTexture, makeDoc, Beam, Stream, seg, bell, E, lerp } from '../helpers.js';
 
 const K = 5, TOK = 22;
 export class GenerateStation extends Station {
@@ -11,52 +11,57 @@ export class GenerateStation extends Station {
     this.core = new THREE.Group(); this.core.position.set(0, 2.6, 0); g.add(this.core);
     this.shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1.55, 1), glass(0xd9ccff, { thickness: 1.5, tint: 0x9b7bff, att: 2.2, roughness: 0.04 }));
     this.core.add(this.shell);
-    this.shellEdges = edgeLines(this.shell.geometry, COL.violet, 2.2, 0.55); this.core.add(this.shellEdges);
-    this.neural = new THREE.Mesh(new THREE.IcosahedronGeometry(0.85, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(COL.violet).multiplyScalar(2.6), wireframe: true, transparent: true, opacity: 0.65 }));
+    this.shellEdges = edgeLines(this.shell.geometry, COL.violet, 1, 0.4); this.core.add(this.shellEdges);
+    this.neural = new THREE.Mesh(new THREE.IcosahedronGeometry(0.85, 3), new THREE.MeshBasicMaterial({ color: 0xb9b5d0, wireframe: true, transparent: true, opacity: 0.3, depthWrite: false }));
     this.core.add(this.neural);
-    this.heart = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 16), glow(0xffc6ff, 2.6)); this.core.add(this.heart);
+    this.heart = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 16), glow(COL.violet, 2)); this.core.add(this.heart);
     this.orbits = [];
     for (let i = 0; i < 3; i++) {
       const o = new THREE.Group(); o.rotation.set(i * 1.05, i * 0.7, 0); this.core.add(o);
-      const r = new THREE.Mesh(new THREE.TorusGeometry(2.05 + i * 0.22, 0.012, 8, 160), glow(i === 0 ? COL.violet : i === 1 ? COL.lava : COL.cyan, 2.6)); o.add(r);
-      const sat = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 8), glow(0xffffff, 4)); sat.position.x = 2.05 + i * 0.22; o.add(sat);
+      const r = new THREE.Mesh(new THREE.TorusGeometry(2.05 + i * 0.22, 0.012, 8, 160), metal(i === 1 ? 0x8a8f99 : 0x6b6f78, 0.4, 0.7)); o.add(r);
+      const sat = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 8), glow(i === 1 ? COL.lava : 0xe9e6e0, 1.5)); sat.position.x = 2.05 + i * 0.22; o.add(sat);
       this.orbits.push(o);
     }
     this.addLabel('Llama 3.3 70B Instruct', 'violet big', [0, -2.35, 0.4], this.core);
 
     // inputs: question + context chunks
-    this.qCard = new THREE.Mesh(roundedBox(2.2, 0.62, 0.1, 0.12), frost(0x9fe9ff, 0.25, { emissive: COL.cyan, ei: 0.3 }));
-    this.qCard.add(edgeLines(this.qCard.geometry, COL.cyan, 2.2, 0.7)); g.add(this.qCard);
+    this.qCard = new THREE.Mesh(roundedBox(2.2, 0.62, 0.1, 0.12), frost(0x5b6470, 0.55));
+    this.qCard.add(edgeLines(this.qCard.geometry, COL.cyan, 1, 0.5)); g.add(this.qCard);
     this.qLbl = this.addLabel('question', 'cyan', [0, 0, 0.1], this.qCard);
     this.ctx = [];
     for (let i = 0; i < K; i++) {
       const tex = docTexture(i % 2).clone(); tex.repeat.set(0.5, 0.25); tex.offset.set((i % 2) * 0.5, 0.25 * ((i + 1) % 4)); tex.needsUpdate = true;
-      const m = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.42, 0.08), [metal(0x2a3048), metal(0x2a3048), metal(0x2a3048), metal(0x2a3048), new THREE.MeshStandardMaterial({ map: tex, color: 0xb8bccb, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.07, envMapIntensity: 0.35 }), metal(0x2a3048)]);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.42, 0.08), [matte(0x3a3d44, .6), matte(0x3a3d44, .6), matte(0x3a3d44, .6), matte(0x3a3d44, .6), new THREE.MeshStandardMaterial({ map: tex, color: 0xb8bccb, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.07, envMapIntensity: 0.35 }), matte(0x3a3d44, .6)]);
       m.add(edgeLines(m.geometry, COL.amber, 3, 1)); g.add(m); this.ctx.push(m);
     }
     this.ctxLbl = this.addLabel('context · top 5', 'lava', [-5.3, 0.35, 0.6]);
 
     // tokens out
-    this.tokens = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshBasicMaterial({ color: new THREE.Color(COL.amber).multiplyScalar(3) }), TOK);
+    this.tokens = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshStandardMaterial({ color: COL.amber, roughness: 0.45, metalness: 0.2 }), TOK);
     this.tokens.frustumCulled = false; g.add(this.tokens);
     this.outCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(1.2, 2.8, 0.3), new THREE.Vector3(2.6, 4.2, 0.6), new THREE.Vector3(4.2, 3.5, 0.5)]);
     // answer panel
-    this.aPanel = new THREE.Mesh(roundedBox(3.4, 1.4, 0.12, 0.16), frost(0xffd2b8, 0.22, { emissive: COL.ember, ei: 0.25 }));
+    this.aPanel = new THREE.Mesh(roundedBox(3.4, 1.4, 0.12, 0.16), frost(0x6b5a52, 0.5));
     this.aPanel.position.set(5.0, 3.1, 0.5); g.add(this.aPanel);
-    this.aPanel.add(edgeLines(this.aPanel.geometry, COL.amber, 2.2, 0.6));
+    this.aPanel.add(edgeLines(this.aPanel.geometry, COL.amber, 1, 0.5));
     this.aLbl = this.addLabel('<b>90 days</b> from date of service <span class="cite">1</span><span class="cite">2</span>', 'bubble lava', [0, 0, 0.1], this.aPanel);
     // sources
     this.srcs = [0, 1].map((i) => { const d = makeDoc(i, 0.55, 0.72); d.position.set(4.2 + i * 1.6, 1.0, 0.6); g.add(d); return d; });
     this.srcLbls = ['Contract §4.2', 'Claims Policy p.7'].map((s, i) => this.addLabel(s, 'ghost', [4.2 + i * 1.6, 0.4, 0.6]));
     this.beams = [0, 1].map(() => { const b = new Beam(COL.amber, 0.016, 3); g.add(b.mesh); return b; });
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._s = new THREE.Vector3(); this._p = new THREE.Vector3();
+    this.pick(this.core, 'llm', [1.65, 1.6, 0]);
+    this.pick(this.hitBox(1.9, 3.0, 0.6, [-5.2, 2.7, 0.6]), 'prompt', [1.0, 1.5, 0]);
+    this.pick(this.hitBox(3.0, 1.4, 0.6, [2.7, 3.7, 0.4]), 'tokens', null);
+    this.pick(this.aPanel, 'answer', [1.85, 0.78, 0.1]);
+    this.srcs.forEach((d, i) => this.pick(d, 'citation', i ? null : [0, 0.5, 0.05]));
   }
   update(t, time) {
     const fade = 1 - seg(t, 9.5, 10);
     const think = bell(t, 2.6, 5.4);
     this.shell.rotation.y = this.shellEdges.rotation.y = time * 0.15;
     this.neural.rotation.y = -time * (0.3 + think * 2.5); this.neural.rotation.x = time * 0.2;
-    this.neural.material.opacity = 0.45 + think * 0.5;
+    this.neural.material.opacity = 0.22 + think * 0.25;
     this.heart.scale.setScalar(1 + think * 0.6 + Math.sin(time * 5) * 0.04 * (1 + think * 3));
     this.orbits.forEach((o, i) => { o.rotation.z += 0.01 * (1 + think * 5) * (i % 2 ? -1 : 1); });
     // inputs

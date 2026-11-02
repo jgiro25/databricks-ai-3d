@@ -1,36 +1,35 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%224%22 fill=%22%23ff5a36%22/%3E%3C/svg%3E">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Databricks AI · 3D Use Case Lab</title>
-<meta name="theme-color" content="#06070d" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%224%22 fill=%22%23D9663B%22/%3E%3C/svg%3E">
+<meta name="theme-color" content="#15171b" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="./assets/index-LLXLMDCj.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-AMKNhk0n.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="./assets/index-DiZxBopI.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-D7iI_aDg.css">
 </head>
 <body>
 <canvas id="gl"></canvas>
 <div id="labels"></div>
 <div class="vignette"></div>
-<div class="grain"></div>
+<div id="tip" class="tip" role="status"></div>
 
-<!-- LOADER -->
-<div id="loader"><div class="ld-core"><i></i><i></i><i></i></div><span>Initializing lakehouse…</span></div>
+<div id="loader"><div class="ld"></div><span>Loading scene…</span></div>
 
 <!-- HOME -->
 <section id="home" class="screen">
   <header class="home-top">
-    <div class="brand"><span class="brand-mark"></span><b>LAKEHOUSE</b><em>AI LAB</em></div>
-    <div class="home-meta"><span class="dot live"></span>1 live · 19 in build</div>
+    <div class="brand"><span class="brand-mark"></span><b>Databricks AI</b><em>3D Use Case Lab</em></div>
+    <div class="home-meta"><span class="dot live"></span>1 live · 19 in progress</div>
   </header>
   <div class="hero">
-    <div class="eyebrow">Databricks AI · learn by watching</div>
-    <h1>20 use cases.<br/><span class="grad">Built in 3D.</span></h1>
-    <p class="sub">Pick a use case. Fly through its architecture step by step: what happens, which tool, which model, why.</p>
+    <div class="eyebrow">Learn by watching</div>
+    <h1>20 Databricks AI use cases,<br/><span class="accent">explained in 3D.</span></h1>
+    <p class="sub">Pick a use case. Walk through its architecture one step at a time: what happens, which tool, which model, and why. Click any object to see how it works.</p>
   </div>
   <div id="grid" class="grid"></div>
 </section>
@@ -40,20 +39,16 @@
   <header class="hud-top">
     <button id="btnHome" class="chip-btn" aria-label="Back to use cases"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>All use cases</span></button>
     <div class="uc-title"><span class="uc-num">01</span><span class="uc-name">Document Q&amp;A with RAG</span></div>
-    <div class="step-count"><b id="stepNow">1</b><span>/ 9</span></div>
+    <div class="step-count"><b id="stepNow">00</b><span>/ 09</span></div>
   </header>
 
   <aside id="card" class="card">
-    <div class="card-step"><span id="cStepIdx">STEP 01</span><span id="cPhase" class="phase">GOAL</span></div>
-    <h2 id="cTitle">Ask. Get a cited answer.</h2>
-    <div class="rows">
-      <div class="row"><i class="ico what"></i><div><label>WHAT</label><p id="cWhat"></p></div></div>
-      <div class="row"><i class="ico how"></i><div><label>HOW</label><p id="cHow"></p></div></div>
-      <div class="row"><i class="ico why"></i><div><label>WHY</label><p id="cWhy"></p></div></div>
-    </div>
+    <div class="card-step"><span id="cStepIdx">STEP 00</span><span id="cPhase" class="phase">NEED</span></div>
+    <h2 id="cTitle"></h2>
+    <div id="cRows" class="rows"></div>
     <div id="cTags" class="tags"></div>
-    <button id="btnCode" class="code-toggle"><span>&lt;/&gt;</span> Try it</button>
-    <pre id="cCode" class="code hidden"></pre>
+    <button id="btnDeep" class="deep-btn">Read the full explanation <b>→</b></button>
+    <p class="card-hint"><i class="hs-dot"></i>Click any object or <span class="plus">+</span> marker in the scene to inspect it.</p>
   </aside>
 
   <nav class="bottom">
@@ -64,8 +59,18 @@
     </div>
     <div id="map" class="map"></div>
   </nav>
-  <div class="hint">← → to move · drag to orbit</div>
+  <div class="hint">← → steps · drag to orbit · click objects to inspect</div>
 </section>
+
+<!-- DETAIL PANEL -->
+<aside id="panel" class="panel" aria-label="Detailed explanation">
+  <header class="p-head">
+    <button id="pBack" class="p-back hidden">← Step overview</button>
+    <div id="pKick" class="p-kick"></div>
+    <button id="pClose" class="p-close" aria-label="Close">✕</button>
+  </header>
+  <div id="pBody" class="p-body"></div>
+</aside>
 
 </body>
 </html>

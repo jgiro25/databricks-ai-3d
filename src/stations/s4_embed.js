@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Station } from './base.js';
-import { COL, CLUSTER, glow, glowT, metal, edgeLines, docTexture, seg, bell, E, lerp } from '../helpers.js';
+import { COL, CLUSTER, matte, glow, glowT, metal, edgeLines, docTexture, seg, bell, E, lerp } from '../helpers.js';
 import { rng } from './cloud.js';
 
 const N = 6, BARS = 18;
@@ -10,21 +10,21 @@ export class EmbedStation extends Station {
     const g = this.group;
     // portal = embedding model
     this.portal = new THREE.Group(); this.portal.position.set(-0.2, 2.4, 0); g.add(this.portal);
-    this.ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.11, 24, 160), metal(0x1b2033, 0.2, 1)); this.portal.add(this.ring);
-    this.ringGlow = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.035, 8, 160), glow(COL.lava, 4)); this.ringGlow.position.z = 0.12; this.portal.add(this.ringGlow);
-    this.ring2 = new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.015, 8, 160, Math.PI * 1.4), glow(COL.amber, 3)); this.portal.add(this.ring2);
-    this.ring3 = new THREE.Mesh(new THREE.TorusGeometry(2.25, 0.012, 8, 160, Math.PI * 0.8), glow(COL.violet, 3)); this.portal.add(this.ring3);
+    this.ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.11, 24, 160), metal(0x3a3d44, 0.35, 0.75)); this.portal.add(this.ring);
+    this.ringGlow = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.035, 8, 160), glow(COL.lava, 2)); this.ringGlow.position.z = 0.12; this.portal.add(this.ringGlow);
+    this.ring2 = new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.015, 8, 160, Math.PI * 1.4), matte(0x8a8f99, 0.5)); this.portal.add(this.ring2);
+    this.ring3 = new THREE.Mesh(new THREE.TorusGeometry(2.25, 0.012, 8, 160, Math.PI * 0.8), matte(0x6b6f78, 0.5)); this.portal.add(this.ring3);
     this.swirl = new THREE.Mesh(new THREE.CircleGeometry(1.62, 96), new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
       uniforms: { uTime: { value: 0 }, uAmp: { value: 0.5 } },
       vertexShader: 'varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader: `uniform float uTime; uniform float uAmp; varying vec2 vUv;
         void main(){ vec2 p = vUv-.5; float r = length(p)*2.; float a = atan(p.y,p.x);
-          float s = sin(a*6. + r*14. - uTime*4.)*.5+.5; float s2 = sin(a*3. - r*9. + uTime*2.5)*.5+.5;
-          vec3 c = mix(vec3(1.,.21,.13), vec3(1.,.7,.28), s2) * (s*.7+.3);
-          float m = smoothstep(1.,.2,r) * (0.35 + uAmp);
-          c += vec3(1.,.85,.6) * smoothstep(.35,.0,r) * uAmp * 1.5;
-          gl_FragColor = vec4(c*m, m); }` }));
+          float s = sin(a*5. + r*10. - uTime*2.)*.5+.5;
+          vec3 base = vec3(.11,.12,.14);
+          vec3 c = mix(base, vec3(.85,.40,.23), s * smoothstep(1.,.1,r) * (.18 + uAmp*.55));
+          c = mix(c, vec3(.93,.9,.86), smoothstep(.3,.0,r) * uAmp * .5);
+          gl_FragColor = vec4(c, .92); }` }));
     this.portal.add(this.swirl);
     this.addLabel('databricks-gte-large-en', 'violet big', [0, -2.6, 0], this.portal);
 
@@ -32,7 +32,7 @@ export class EmbedStation extends Station {
     this.chunks = [];
     for (let i = 0; i < N; i++) {
       const tex = docTexture(i % 3).clone(); tex.repeat.set(0.5, 0.25); tex.offset.set((i % 2) * 0.5, 0.25 * (i % 4)); tex.needsUpdate = true;
-      const m = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.72, 0.1), [metal(0x2a3048), metal(0x2a3048), metal(0x2a3048), metal(0x2a3048), new THREE.MeshStandardMaterial({ map: tex, color: 0xb8bccb, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.07, envMapIntensity: 0.35 }), metal(0x2a3048)]);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.72, 0.1), [matte(0x3a3d44, .6), matte(0x3a3d44, .6), matte(0x3a3d44, .6), matte(0x3a3d44, .6), new THREE.MeshStandardMaterial({ map: tex, color: 0xb8bccb, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.07, envMapIntensity: 0.35 }), matte(0x3a3d44, .6)]);
       m.add(edgeLines(m.geometry, i % 3 === 1 ? COL.cyan : COL.amber, 2.6, 1));
       g.add(m); this.chunks.push(m);
     }
@@ -43,12 +43,12 @@ export class EmbedStation extends Station {
     this.vecs = [];
     const bar = new THREE.BoxGeometry(0.09, 1, 0.09); bar.translate(0, 0.5, 0);
     for (let i = 0; i < N; i++) {
-      const im = new THREE.InstancedMesh(bar, new THREE.MeshBasicMaterial({ color: 0xffffff }), BARS);
+      const im = new THREE.InstancedMesh(bar, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.1 }), BARS);
       const heights = [];
       const col = new THREE.Color();
       for (let b = 0; b < BARS; b++) {
         const h = 0.12 + r() * 0.55; heights.push(h);
-        col.set(CLUSTER[(b + i) % 2 === 0 ? 1 : 2]).lerp(new THREE.Color(COL.cyan), r()).multiplyScalar(2.2);
+        col.set(CLUSTER[(b + i) % 2 === 0 ? 1 : 2]).lerp(new THREE.Color(COL.cyan), r());
         im.setColorAt(b, col);
       }
       im.userData.h = heights; im.frustumCulled = false;
@@ -56,10 +56,13 @@ export class EmbedStation extends Station {
     }
     this.dims = this.addLabel('[0.12, −0.83, 0.41, … ] · 1024 dims', 'cyan', [3.1, 5.25, 0.3]);
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._s = new THREE.Vector3(); this._p = new THREE.Vector3();
-    this.sparks = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.08, color: new THREE.Color(COL.amber).multiplyScalar(2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.sparks = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.04, color: COL.amber, transparent: true, opacity: 0.55, depthWrite: false }));
     const sp = new Float32Array(200 * 3); this.sparkSeed = new Float32Array(200 * 3).map(() => Math.random());
     this.sparks.geometry.setAttribute('position', new THREE.BufferAttribute(sp, 3)); this.sparks.frustumCulled = false;
     this.portal.add(this.sparks);
+    this.pick(this.portal, 'embedModel', [1.75, 1.75, 0]);
+    this.pick(this.hitBox(1.6, 4.2, 0.8, [-5.4, 2.6, 0.3]), 'chunk', [0.2, 2.4, 0]);
+    this.pick(this.hitBox(3.0, 4.2, 0.8, [3.2, 2.6, 0.3]), 'vector', [1.7, 2.0, 0]);
   }
   update(t, time) {
     const fade = 1 - seg(t, 8.5, 9);

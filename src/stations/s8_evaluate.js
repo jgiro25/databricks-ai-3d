@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Station } from './base.js';
-import { COL, glow, glowT, frost, metal, edgeLines, roundedBox, seg, bell, E, lerp } from '../helpers.js';
+import { COL, matte, glow, glowT, frost, metal, edgeLines, roundedBox, seg, bell, E, lerp } from '../helpers.js';
 
 const SPANS = [
   { n: 'agent', s: 0, d: 1, c: COL.lava, ms: '1.42 s' },
@@ -14,13 +14,13 @@ const JUDGES = [
 function arcMat(color) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false,
-    uniforms: { uP: { value: 0 }, uC: { value: new THREE.Color(color).multiplyScalar(1.5) }, uT: { value: 0 } },
+    uniforms: { uP: { value: 0 }, uC: { value: new THREE.Color(color) }, uT: { value: 0 } },
     vertexShader: 'varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
     fragmentShader: `uniform float uP; uniform vec3 uC; uniform float uT; varying vec2 vUv;
       void main(){ vec2 p = vUv-.5; float r = length(p)*2.; float a = atan(p.x, p.y)/6.28318+.5;
         float band = smoothstep(.70,.73,r)*smoothstep(.93,.9,r);
         float on = step(a, uP);
-        vec3 bg = vec3(.12,.14,.22);
+        vec3 bg = vec3(.17,.18,.2);
         vec3 c = mix(bg, uC*(.8+.2*sin(a*30.-uT*4.)), on);
         float inner = smoothstep(.62,.6,r)*.05;
         gl_FragColor = vec4(c*band + uC*inner*on*.6, band + inner*.5); }`,
@@ -32,11 +32,11 @@ export class EvaluateStation extends Station {
     const g = this.group;
     // trace panel
     this.panel = new THREE.Group(); this.panel.position.set(-2.4, 2.7, 0); this.panel.rotation.y = 0.18; g.add(this.panel);
-    const back = new THREE.Mesh(roundedBox(6.0, 3.6, 0.1, 0.18), frost(0x9fb4ff, 0.12)); back.position.z = -0.15; this.panel.add(back);
-    back.add(edgeLines(back.geometry, 0x7f8cff, 1.4, 0.35));
+    const back = new THREE.Mesh(roundedBox(6.0, 3.6, 0.1, 0.18), frost(0x3e434c, 0.55)); back.position.z = -0.15; this.panel.add(back);
+    back.add(edgeLines(back.geometry, 0x8a8f99, 1, 0.3));
     this.addLabel('MLflow Trace', 'lava big', [-2.1, 2.15, 0], this.panel);
     // time ticks
-    for (let i = 0; i <= 6; i++) { const tk = new THREE.Mesh(new THREE.BoxGeometry(0.01, 3.0, 0.01), new THREE.MeshBasicMaterial({ color: 0x3a4160, transparent: true, opacity: 0.5 })); tk.position.set(-2.6 + i * (5.2 / 6), -0.1, -0.05); this.panel.add(tk); }
+    for (let i = 0; i <= 6; i++) { const tk = new THREE.Mesh(new THREE.BoxGeometry(0.01, 3.0, 0.01), new THREE.MeshBasicMaterial({ color: 0x6b6f78, transparent: true, opacity: 0.35 })); tk.position.set(-2.6 + i * (5.2 / 6), -0.1, -0.05); this.panel.add(tk); }
     this.bars = SPANS.map((s, i) => {
       const geo = roundedBox(1, 0.42, 0.22, 0.08); geo.translate(0.5, 0, 0);
       const m = new THREE.Mesh(geo, glow(s.c, 1.0));
@@ -55,19 +55,23 @@ export class EvaluateStation extends Station {
     const cols = [COL.amber, COL.cyan, COL.violet, COL.mint];
     this.gauges = JUDGES.map((j, i) => {
       const grp = new THREE.Group(); grp.position.set((i % 2 ? 1 : -1) * 1.15, i < 2 ? 1.05 : -1.15, 0); this.judges.add(grp);
-      const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.12, 64), metal(0x121626, 0.3, 0.8)); disc.rotation.x = Math.PI / 2; disc.position.z = -0.08; grp.add(disc);
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.12, 64), metal(0x2b2e34, 0.4, 0.6)); disc.rotation.x = Math.PI / 2; disc.position.z = -0.08; grp.add(disc);
       const arc = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), arcMat(cols[i])); grp.add(arc);
       const check = new THREE.Group();
       const a = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.08, 0.08), glow(cols[i], 3)); a.position.set(-0.13, -0.05, 0); a.rotation.z = -Math.PI / 4; check.add(a);
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.08), glow(cols[i], 3)); b.position.set(0.12, 0.06, 0); b.rotation.z = Math.PI / 4; check.add(b);
       grp.add(check);
-      const l = this.addLabel(j.n + ' <b style="color:#fff">' + Math.round(j.v * 100) + '%</b>', '', [0, -1.22, 0], grp);
+      const l = this.addLabel(j.n + ' <b>' + Math.round(j.v * 100) + '%</b>', '', [0, -1.22, 0], grp);
       return { grp, arc, check, l, v: j.v };
     });
     // eval set questions feeding judges
     this.qs = [];
-    for (let i = 0; i < 8; i++) { const q = new THREE.Mesh(roundedBox(0.36, 0.24, 0.06, 0.05), glow(COL.cyan, 1.8)); g.add(q); this.qs.push(q); }
+    for (let i = 0; i < 8; i++) { const q = new THREE.Mesh(roundedBox(0.36, 0.24, 0.06, 0.05), matte(COL.cyan, 0.5)); g.add(q); this.qs.push(q); }
     this.evalLbl = this.addLabel('mlflow.genai.evaluate', 'cyan', [0.7, 0.35, 1.8]);
+    this.pick(this.panel, 'trace', [3.1, 1.95, 0]);
+    ['correctness', 'groundedness', 'relevance', 'safety'].forEach((id, i) => this.pick(this.gauges[i].grp, id, [0.78, 0.78, 0.1]));
+    this.qs.forEach((q) => this.pick(q, 'evalSet', null));
+    this.pick(this.hitBox(2.6, 0.5, 0.3, [0.7, 0.35, 1.8]), 'evalSet', [1.45, 0, 0]);
   }
   update(t, time) {
     const fade = 1 - seg(t, 8.5, 9);

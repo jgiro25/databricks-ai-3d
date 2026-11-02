@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Station } from './base.js';
-import { COL, glow, glowT, glass, frost, metal, edgeLines, roundedBox, makeDoc, DOC_COLORS, Stream, seg, bell, E, lerp } from '../helpers.js';
+import { COL, matte, glow, glowT, glass, frost, metal, edgeLines, roundedBox, makeDoc, DOC_COLORS, Stream, seg, bell, E, lerp } from '../helpers.js';
 
 const N = 6;
 export class IngestStation extends Station {
@@ -17,41 +17,46 @@ export class IngestStation extends Station {
     const cyl = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.35, 3.2, 64, 1, true), glass(0xcfe8ff, { thickness: 0.4, tint: 0x9fd6ff, att: 4, side: THREE.DoubleSide }));
     cyl.position.y = 1.75; this.vol.add(cyl);
     for (const y of [0.15, 3.35]) {
-      const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 1.48, 0.16, 64), metal(0x151a2a, 0.3, 0.9)); cap.position.y = y; this.vol.add(cap);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.035, 8, 120), glow(COL.lava, 3)); ring.rotation.x = Math.PI / 2; ring.position.y = y + 0.09; this.vol.add(ring);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 1.48, 0.16, 64), metal(0x2a2d33, 0.45, 0.7)); cap.position.y = y; this.vol.add(cap);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.035, 8, 120), glow(COL.lava, 1)); ring.rotation.x = Math.PI / 2; ring.position.y = y + 0.09; this.vol.add(ring);
     }
     // UC hex badge
-    this.hex = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.05, 6, 6), glow(COL.amber, 3)); this.hex.position.set(0, 4.15, 0); this.vol.add(this.hex);
-    this.core = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.6, 32, 1, true), glowT(COL.ember, 1.4, 0.25)); this.core.position.y = 1.75; this.vol.add(this.core);
+    this.hex = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.05, 6, 6), metal(0xc3a273, 0.4, 0.7)); this.hex.position.set(0, 4.15, 0); this.vol.add(this.hex);
+    this.core = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.6, 32, 1, true), glowT(COL.ember, 0.4, 0.12)); this.core.position.y = 1.75; this.vol.add(this.core);
     this.inside = [];
-    for (let i = 0; i < N; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 0.8), glow(DOC_COLORS[i], 2.4)); s.position.set(0, 0.45 + i * 0.42, 0); this.vol.add(s); this.inside.push(s); }
+    for (let i = 0; i < N; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 0.8), matte(DOC_COLORS[i], 0.6)); s.position.set(0, 0.45 + i * 0.42, 0); this.vol.add(s); this.inside.push(s); }
     this.addLabel('Unity Catalog Volume', 'lava big', [0, -0.55, 1.6], this.vol);
 
     // Delta table
     this.tbl = new THREE.Group(); this.tbl.position.set(5.0, 0.2, 0); g.add(this.tbl);
-    const back = new THREE.Mesh(roundedBox(3.1, 3.5, 0.12, 0.12), frost(0x9fe9ff, 0.12)); back.position.set(0, 2, -0.35); this.tbl.add(back);
-    back.add(edgeLines(back.geometry, COL.cyan, 1.4, 0.35));
-    const head = new THREE.Mesh(roundedBox(2.8, 0.32, 0.16, 0.06), glow(COL.cyan, 1.2)); head.position.set(0, 3.45, 0); this.tbl.add(head);
+    const back = new THREE.Mesh(roundedBox(3.1, 3.5, 0.12, 0.12), frost(0x4a5260, 0.35)); back.position.set(0, 2, -0.35); this.tbl.add(back);
+    back.add(edgeLines(back.geometry, COL.cyan, 1, 0.3));
+    const head = new THREE.Mesh(roundedBox(2.8, 0.32, 0.16, 0.06), matte(0x3a3f47, 0.6)); head.position.set(0, 3.45, 0); this.tbl.add(head);
     this.rows = [];
     for (let r = 0; r < N; r++) {
       const row = [];
-      for (let c = 0; c < 3; c++) {
-        const w = c === 0 ? 0.6 : c === 1 ? 1.2 : 0.75;
-        const x = c === 0 ? -1.05 : c === 1 ? -0.1 : 0.98;
-        const cell = new THREE.Mesh(roundedBox(w, 0.26, 0.12, 0.05), c === 0 ? glow(DOC_COLORS[r], 2.2) : frost(0x7d89a6, 0.4, { emissive: 0x9fb4d0, ei: 0.06 }));
+      for (let c = 0; c < 4; c++) {
+        const W = [0.95, 0.62, 0.42, 0.55], X = [-0.86, 0.0, 0.57, 1.11];
+        const w = W[c], x = X[c];
+        const cell = new THREE.Mesh(roundedBox(w, 0.26, 0.12, 0.05), c === 0 ? matte(DOC_COLORS[r], 0.55) : c === 3 ? matte(0x4a4f58, 0.5) : matte(0x8d929b, 0.6));
         cell.position.set(x, 2.95 - r * 0.42, 0); this.tbl.add(cell); row.push(cell);
       }
       this.rows.push(row);
     }
-    this.delta = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 3), glow(COL.cyan, 3)); this.delta.position.set(0, 4.4, 0); this.delta.rotation.z = Math.PI / 2; this.tbl.add(this.delta);
-    this.addLabel('Delta table', 'cyan big', [0, -0.4, 1.0], this.tbl);
+    this.delta = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 3), metal(0x8aa4ba, 0.4, 0.7)); this.delta.position.set(0, 4.4, 0); this.delta.rotation.z = Math.PI / 2; this.tbl.add(this.delta);
+    this.addLabel('Delta table · raw_docs', 'cyan big', [0, -0.4, 1.0], this.tbl);
+    this.addLabel('<span>path</span><span>modTime</span><span>length</span><span>content</span>', 'cols', [0.1, 3.82, 0.1], this.tbl);
     this.addLabel('READ_FILES', 'ghost', [2.5, 3.7, 0.4]);
 
     // packets volume -> table
-    this.packets = []; for (let i = 0; i < N; i++) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), glow(DOC_COLORS[i], 3.5)); g.add(p); this.packets.push(p); }
+    this.packets = []; for (let i = 0; i < N; i++) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), matte(DOC_COLORS[i], 0.5)); g.add(p); this.packets.push(p); }
     this.flow = new THREE.CatmullRomCurve3([new THREE.Vector3(1.4, 2.2, 0), new THREE.Vector3(2.6, 3.0, 0.4), new THREE.Vector3(3.6, 2.5, 0.2)]);
     this.stream = new Stream(this.flow, 30, COL.cyan, 0.1, 0.5); g.add(this.stream.points);
     this._a = new THREE.Vector3(); this._b = new THREE.Vector3();
+    this.docs.forEach((d, i) => this.pick(d, 'pdf', i === 0 ? [0, 0.8, 0.05] : null));
+    this.pick(this.vol, 'volume', [1.55, 3.55, 0]);
+    this.pick(this.tbl, 'deltaTable', [1.75, 3.5, 0]);
+    this.pick(this.hitBox(1.6, 1.4, 1, [2.5, 2.7, 0.2]), 'readFiles', [0, 0.35, 0]);
   }
   update(t, time) {
     this.hex.rotation.y = time * 0.8; this.delta.rotation.y = time * 0.6;
