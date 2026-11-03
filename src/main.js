@@ -231,8 +231,8 @@ function renderCard(i) {
   $('#cTitle').textContent = s.title;
   if (s.split) {
     $('#cRows').innerHTML = `<div class="split">
-      <div class="col need"><label>Business need</label><ul>${s.split.need.map((t) => `<li>${t}</li>`).join('')}</ul></div>
-      <div class="col sol"><label>Developer solution</label><ul>${s.split.solution.map((t) => `<li>${t}</li>`).join('')}</ul></div></div>`;
+      <div class="col need"><label>${s.split.labels?.[0] || 'Business need'}</label><ul>${s.split.need.map((t) => `<li>${t}</li>`).join('')}</ul></div>
+      <div class="col sol"><label>${s.split.labels?.[1] || 'Developer solution'}</label><ul>${s.split.solution.map((t) => `<li>${t}</li>`).join('')}</ul></div></div>`;
   } else {
     $('#cRows').innerHTML = [['what', 'What', s.what], ['how', 'How', s.how], ['why', 'Why', s.why]]
       .map(([k, l, t]) => `<div class="row"><i class="ico ${k}"></i><div><label>${l}</label><p>${t}</p></div></div>`).join('');
@@ -249,7 +249,7 @@ function renderCard(i) {
 const KW = {
   sql: new Set('SELECT FROM WHERE CREATE OR REPLACE TABLE VOLUME AS AND INSERT INTO LATERAL ALTER SET TBLPROPERTIES GRANT ON TO USE CATALOG SCHEMA DESCRIBE HISTORY LIMIT ORDER BY GROUP JOIN STRING INT BIGINT NULL TRUE FALSE WITH IF NOT EXISTS DESC ASC IN IS CASE WHEN THEN ELSE END MERGE USING MATCHED UPDATE VALUES DISTINCT INTERVAL HOUR DAY ARRAY MAP STRUCT VARIANT BINARY TIMESTAMP DOUBLE FLOAT BOOLEAN FUNCTION RETURN RETURNS ROW FILTER MASK COLUMN CONSTRAINT PRIMARY KEY FOREIGN REFERENCES COMMENT METRICS LANGUAGE YAML VIEW STREAMING MATERIALIZED REFRESH STREAM EXPECT VIOLATION DROP ADD DATE DECIMAL BETWEEN ALL ILIKE LIKE ALTER'.split(' ')),
   py: new Set('from import def return for in if else elif with as None True False lambda class not and or is try except raise while print'.split(' ')),
-  sh: new Set('pip install databricks fs cp agentbricks init dev deploy deployments logs get stop list export cd curl genie'.split(' ')),
+  sh: new Set('pip install databricks fs cp agentbricks init dev deploy deployments logs get stop list export cd curl'.split(' ')),
 };
 function hl(src, lang) {
   const cm = lang === 'sql' ? '--[^\\n]*' : '#[^\\n]*';
@@ -547,7 +547,7 @@ addEventListener('resize', resize);
 
 // boot
 resize();
-const m = location.hash.match(/#\/(rag|genie)\/(\d+)/);
+const m = location.hash.match(/#\/(rag|inside)\/(\d+)/);
 const shotT = parseFloat(params.get('t'));
 frozen = !isNaN(shotT) && !!m;
 gsap.ticker.lagSmoothing(frozen ? 0 : 2000, 50); // slow GPUs: let UI tweens finish in real time

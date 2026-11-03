@@ -1,0 +1,107 @@
+// Use case 02 · Inside RAG: how a PDF becomes searchable vectors (developer deep dive)
+export const PHASES_RX = [
+  { name: 'Questions', steps: [0] },
+  { name: 'Store the PDF', steps: [1, 2] },
+  { name: 'Text & chunks', steps: [3, 4] },
+  { name: 'Vectors', steps: [5, 6] },
+  { name: 'Query time', steps: [7, 8] },
+  { name: 'Storage map', steps: [9] },
+];
+
+const I = {
+  q: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5V14M12 17h.01"/>',
+  vol: '<path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3v10c0 1.7-3.6 3-8 3s-8-1.3-8-3z"/><path d="M4 7c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  bytes: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h2M11 10h2M15 10h2M7 14h2M11 14h2M15 14h2"/>',
+  parse: '<path d="M4 4h10l6 6v10H4z"/><path d="M8 12h8M8 15h8M8 18h5"/>',
+  chunk: '<rect x="3" y="6" width="7" height="12" rx="1"/><rect x="14" y="6" width="7" height="12" rx="1"/><path d="M10 9h4M10 15h4"/>',
+  embed: '<path d="M4 18V14M8 18V8M12 18v-6M16 18V5M20 18v-9"/>',
+  index: '<circle cx="6" cy="6" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="17" cy="17" r="2"/><path d="M8 6.5l8 1M7 8l1 8M10 18h5M18 10v5"/>',
+  query: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+  prompt: '<path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+  map: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
+};
+
+export const STEPS_RX = [
+  {
+    key: 'questions', short: 'Questions', phase: 'Questions', icon: I.q,
+    title: 'Five questions this deep dive answers',
+    split: {
+      labels: ['Developer questions', 'Short answers'],
+      need: ['Is the <b>text</b> of the PDF saved in the Delta table?', 'How are <b>chunks</b> cut, and how is each one <b>vectorized</b>?', 'How is the <b>question</b> vectorized and matched to a chunk?', 'Does the search look <b>inside the Delta table</b>?', '<b>Where</b> is each piece stored?'],
+      solution: ['Not at first. The bronze table holds the PDF’s <b>bytes</b>. Text appears only after parsing (silver).', 'Text is split by tokens with overlap, then an embedding model turns each chunk into 1,024 numbers.', 'The <b>same</b> embedding model turns the question into a vector, and the nearest chunk vectors win.', 'No. It searches a separate <b>AI Search index</b> that is kept in sync from the chunks table.', 'Volume → bronze → silver → chunks → index, with models on serving endpoints. All in Unity Catalog.'],
+    },
+    tags: [['Unity Catalog Volume', 'tool'], ['Delta tables', 'tool'], ['ai_parse_document', 'tool'], ['AI Search index', 'tool'], ['databricks-gte-large-en', 'model']],
+  },
+  {
+    key: 'volume', short: 'Volume', phase: 'Store the PDF', icon: I.vol,
+    title: 'The PDF is a file in a Unity Catalog Volume',
+    what: 'The original PDF is uploaded as a file, unchanged, to a governed folder',
+    how: '<code>/Volumes/main/provider_ops/raw_docs/</code>, backed by cloud object storage (S3 / ADLS / GCS)',
+    why: 'The Volume is the source of truth. Every table downstream can be rebuilt from it',
+    tags: [['UC Volume', 'tool'], ['Object storage', 'tool'], ['READ VOLUME', '']],
+  },
+  {
+    key: 'bronze', short: 'Bronze bytes', phase: 'Store the PDF', icon: I.bytes,
+    title: 'Bronze table: the PDF’s bytes, not its text',
+    what: 'Each PDF becomes one row. The <code>content</code> column holds the raw file as BINARY',
+    how: '<code>spark.read.format("binaryFile")</code> → <code>path · modificationTime · length · content</code>',
+    why: 'You cannot search or read text here yet. <code>content</code> starts with <code>%PDF-1.7</code>, then compressed bytes',
+    tags: [['binaryFile', 'tool'], ['Auto Loader', 'tool'], ['BINARY column', '']],
+  },
+  {
+    key: 'parse', short: 'Parse', phase: 'Text & chunks', icon: I.parse,
+    title: 'Parsing turns bytes into text: the silver table',
+    what: 'A parser reads the bytes and writes the PDF’s words, tables and headings as text',
+    how: '<code>ai_parse_document(content)</code> → elements (text, table, section_header…) · OCR for scanned pages',
+    why: 'Only now does a Delta table contain the readable text of the PDF',
+    tags: [['ai_parse_document', 'tool'], ['OCR / layout model', 'model'], ['VARIANT', '']],
+  },
+  {
+    key: 'chunk', short: 'Chunk', phase: 'Text & chunks', icon: I.chunk,
+    title: 'Cut the text into overlapping chunks',
+    what: 'Long text is split into passages of ~500 tokens, each sharing ~60 tokens with its neighbour',
+    how: 'Recursive, section-aware splitter (or <code>ai_prep_search</code>) → <code>chunks</code> table with Change Data Feed on',
+    why: 'A chunk is the unit that gets a vector, gets found, and gets pasted into the prompt',
+    tags: [['Text splitter', 'tool'], ['Overlap', ''], ['Change Data Feed', 'tool']],
+  },
+  {
+    key: 'embed', short: 'Embed', phase: 'Vectors', icon: I.embed,
+    title: 'An embedding: a chunk’s meaning as 1,024 numbers',
+    what: 'An embedding model reads a chunk and outputs a fixed-length list of floats',
+    how: '<code>databricks-gte-large-en</code> → <code>[0.0123, -0.0831, …]</code> (1,024 dims) · similar meaning → nearby vectors',
+    why: 'Distance between vectors becomes a measure of how related two texts are',
+    tags: [['databricks-gte-large-en', 'model'], ['Managed embeddings', 'tool'], ['ARRAY&lt;FLOAT&gt;', '']],
+  },
+  {
+    key: 'index', short: 'Index', phase: 'Vectors', icon: I.index,
+    title: 'The AI Search index: a separate, synced search structure',
+    what: 'Vectors and chosen columns are copied into an ANN graph that lives on an AI Search endpoint',
+    how: 'Delta Sync index reads the chunks table’s <b>Change Data Feed</b> · <code>TRIGGERED</code> or <code>CONTINUOUS</code>',
+    why: 'Fast nearest-neighbour search over millions of vectors, without scanning the table',
+    tags: [['Delta Sync index', 'tool'], ['AI Search endpoint', 'tool'], ['HNSW / ANN', '']],
+  },
+  {
+    key: 'query', short: 'Query', phase: 'Query time', icon: I.query,
+    title: 'Question → vector → nearest chunks in the index',
+    what: 'The question is embedded with the same model, then the index returns the top-k closest chunks',
+    how: '<code>index.similarity_search(query_text=…, num_results=3)</code> · ANN or hybrid · filters',
+    why: 'The search runs <b>against the index</b>, not the Delta table. It returns chunk_id, text and score',
+    tags: [['similarity_search', 'tool'], ['Top-k', ''], ['Hybrid (RRF)', '']],
+  },
+  {
+    key: 'prompt', short: 'Prompt', phase: 'Query time', icon: I.prompt,
+    title: 'The retriever finds. The LLM only reads.',
+    what: 'The returned chunk texts are pasted into the prompt, then the LLM writes the answer',
+    how: 'Your agent code builds <code>system + [1] [2] [3] + question</code> and calls a chat model endpoint',
+    why: 'The LLM never searches anything. It answers only from the text it was handed',
+    tags: [['Retriever', 'tool'], ['Prompt template', ''], ['Chat model endpoint', 'model']],
+  },
+  {
+    key: 'map', short: 'Storage map', phase: 'Storage map', icon: I.map,
+    title: 'Where everything is stored',
+    what: 'Six places hold six different things, from the PDF file to the vectors',
+    how: 'Volume · bronze · silver · chunks · AI Search index · model serving endpoints',
+    why: 'All of them are Unity Catalog objects, with permissions and lineage end to end',
+    tags: [['Unity Catalog', 'tool'], ['Lineage', ''], ['Model Serving', 'tool']],
+  },
+];

@@ -262,6 +262,7 @@ body.panel-open .hint{display:none}
   .tile.live h3{font-size:19px}
   .lbl{font-size:9.5px;padding:3px 6px}
   .lbl.big{font-size:10.5px;padding:4px 7px}
+  .lbl .lsub{display:none}
   .lbl.bubble{font-size:11px;max-width:170px;padding:6px 8px}
   .lbl.section{font-size:9px}
   .lbl.cols{font-size:8px}.lbl.cols span{padding:0 4px}

@@ -7,7 +7,7 @@ for (const [w, h, mob] of [[1440, 900, false], [390, 844, true]]) {
   await p.goto('http://localhost:4173/', { waitUntil: 'networkidle' });
   await p.waitForFunction(() => !document.getElementById('loader'), null, { timeout: 90000 });
   console.log(`== ${w}x${h}`, 'live tiles', await p.$$eval('.tile.live', t => t.map(x => x.dataset.case)));
-  await p.click('.tile.live[data-case="genie"]'); await p.waitForTimeout(5000);
+  await p.click('.tile.live[data-case="inside"]'); await p.waitForTimeout(5000);
   console.log('hash', await p.evaluate(() => location.hash), 'title', await p.textContent('#ucName'), 'step', await p.textContent('#stepNow'), await p.textContent('#stepTot'));
   // every step: card + drawer + objects resolvable + a real click on a pickable point
   for (let i = 0; i < 10; i++) {
@@ -19,16 +19,18 @@ for (const [w, h, mob] of [[1440, 900, false], [390, 844, true]]) {
     let clicked = null;
     if (pt) { if (mob) await p.touchscreen.tap(pt.x, pt.y); else await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(900); clicked = await p.evaluate(() => document.getElementById('panel').classList.contains('open') && document.querySelector('#pBody h2').textContent); }
     const d = await p.evaluate((i) => { __app.openStep(i); return { s: document.querySelectorAll('#pBody section').length, code: document.querySelectorAll('#pBody pre').length, chips: document.querySelectorAll('#pBody .chip').length, title: document.querySelector('#pBody h2').textContent }; }, i);
+    const cov = await p.evaluate(async ([W, H, i]) => { const st = __app.stations[i]; st.local = st.loop * 0.72; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const want = [...new Set(__app.stations[i].picks.map(q => q.obj.userData.pickId))]; const got = new Set(); for (let y = 60; y < H - 60; y += 8) for (let x = 4; x < W - 4; x += 8) { const h = __app.pickAt(x, y); if (h) got.add(h.id); } const hs = [...document.querySelectorAll('.hs')].filter(e => e.style.display !== 'none' && e.offsetParent).length; return { n: want.length, hs, miss: want.filter(id => !got.has(id)) }; }, [w, h, i]);
+    console.log(i, 'picks', cov.n, 'hotspots', cov.hs, 'unreachable', JSON.stringify(cov.miss));
     console.log(i, card, '| drawer', JSON.stringify(d), '| click', pt?.id, '->', clicked);
-    if (i === 6 && !mob) await p.screenshot({ path: 'shots/uc2-19-drawer-step6.png' });
+    if (i === 6 && !mob) await p.screenshot({ path: 'shots/rx-20-drawer-step6.png' });
   }
   // chip -> object -> other chips all resolve
   const allObj = await p.evaluate(() => { const bad = []; for (let i = 0; i < 10; i++) { __app.openStep(i); for (const c of document.querySelectorAll('#pBody .chip')) { __app.openObject(c.dataset.obj); if (!document.querySelector('#pBody h2').textContent) bad.push(c.dataset.obj); } } __app.closePanel(); return bad; });
   console.log('objects w/o content', allObj);
   if (!mob) { // object explainer via real click, step 7
     await p.evaluate(() => __app.go(7, { instant: true })); await p.waitForTimeout(6000);
-    const pt = await p.evaluate(() => { for (let y = 150; y < 700; y += 12) for (let x = 400; x < 1400; x += 12) { const h = __app.pickAt(x, y); if (h && h.id === 'ucGate') return { x, y }; } return null; });
-    if (pt) { await p.mouse.move(pt.x, pt.y); await p.waitForTimeout(400); await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(1200); console.log('ucGate click ->', await p.textContent('#pBody h2')); await p.screenshot({ path: 'shots/uc2-20-click-ucGate.png' }); }
+    const pt = await p.evaluate(() => { for (let y = 150; y < 700; y += 12) for (let x = 400; x < 1400; x += 12) { const h = __app.pickAt(x, y); if (h && h.id === 'annWalk') return { x, y }; } return null; });
+    if (pt) { await p.mouse.move(pt.x, pt.y); await p.waitForTimeout(400); await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(1200); console.log('annWalk click ->', await p.textContent('#pBody h2')); await p.screenshot({ path: 'shots/rx-21-click-annWalk.png' }); }
   }
   // back home, open case 1, check it still works
   await p.keyboard.press('Escape'); await p.waitForTimeout(400); await p.evaluate(() => __app.openHome()); await p.waitForTimeout(2500);
@@ -39,7 +41,7 @@ for (const [w, h, mob] of [[1440, 900, false], [390, 844, true]]) {
   const pt1 = await p.evaluate(([W, H]) => { for (let y = 90; y < H - 200; y += 14) for (let x = 10; x < W - 10; x += 14) { const h = __app.pickAt(x, y); if (h) return { x, y, id: h.id }; } return null; }, [w, h]);
   if (pt1) { if (mob) await p.touchscreen.tap(pt1.x, pt1.y); else await p.mouse.click(pt1.x, pt1.y); await p.waitForTimeout(900); }
   console.log('case1 click', pt1?.id, '->', await p.evaluate(() => document.getElementById('panel').classList.contains('open') && document.querySelector('#pBody h2').textContent));
-  if (mob) await p.screenshot({ path: 'shots/uc2-21-phone-case1-check.png' });
+  if (mob) await p.screenshot({ path: 'shots/rx-22-phone-case1-check.png' });
   console.log('errors', errs);
   await ctx.close();
 }

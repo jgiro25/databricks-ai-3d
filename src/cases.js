@@ -13,15 +13,15 @@ import { RetrieveStation } from './stations/s6_retrieve.js';
 import { GenerateStation } from './stations/s7_generate.js';
 import { EvaluateStation } from './stations/s8_evaluate.js';
 import { DeployStation } from './stations/s9_deploy.js';
-import { STEPS2, PHASES2 } from './uc2/data.js';
-import { DEEP2 } from './uc2/deep.js';
-import { OBJECTS2 } from './uc2/objects.js';
-import { GNeed, GGoal, GCurate, GDescribe, GMetrics } from './uc2/s_a.js';
-import { GAgent, GAsk, GGovern, GBench, GShare } from './uc2/s_b.js';
+import { STEPS_RX, PHASES_RX } from './rx/data.js';
+import { DEEP_RX } from './rx/deep.js';
+import { OBJECTS_RX } from './rx/objects.js';
+import { XQuestions, XVolume, XBronze, XParse, XChunk } from './rx/s_a.js';
+import { XEmbed, XIndex, XQuery, XPrompt, XMap } from './rx/s_b.js';
 
 export const CASES = {
   rag: { id: 'rag', n: 1, title: 'Document Q&A with RAG', steps: STEPS, phases: PHASES, deep: [...DEEP_A, ...DEEP_B], objects: OBJECTS,
     classes: [NeedStation, GoalStation, IngestStation, ChunkStation, EmbedStation, IndexStation, RetrieveStation, GenerateStation, EvaluateStation, DeployStation] },
-  genie: { id: 'genie', n: 2, title: 'Talk to your data with Genie', steps: STEPS2, phases: PHASES2, deep: DEEP2, objects: OBJECTS2,
-    classes: [GNeed, GGoal, GCurate, GDescribe, GMetrics, GAgent, GAsk, GGovern, GBench, GShare] },
+  inside: { id: 'inside', n: 2, title: 'Inside RAG: how a PDF becomes searchable vectors', steps: STEPS_RX, phases: PHASES_RX, deep: DEEP_RX, objects: OBJECTS_RX,
+    classes: [XQuestions, XVolume, XBronze, XParse, XChunk, XEmbed, XIndex, XQuery, XPrompt, XMap] },
 };

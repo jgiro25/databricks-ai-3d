@@ -138,3 +138,131 @@ export class LBeam extends Beam {
     this.mesh.visible = t > 0.001;
   }
 }
+
+// ───────── RX additions (Inside RAG)
+/** Table-looking texture. cols: [[name, widthPx]], rows: [[cell,...]], hl: highlighted column index. */
+export function tableTex(key, { title = '', sub = '', cols, rows, w = 520, h = 200, hl = -1, hlCol = '#d9653b', note = '' }) {
+  return screenTex(key, w, h, (g) => {
+    g.fillStyle = '#1c1f25'; g.fillRect(0, 0, w, h);
+    let y = 10;
+    if (title) {
+      g.fillStyle = '#d9653b'; g.fillRect(14, 12, 3, 14);
+      g.fillStyle = '#e9e6e0'; g.font = `600 12px ${FONT}`; g.fillText(title, 24, 24);
+      if (sub) { g.fillStyle = '#7d828c'; g.font = `11px ${MONO}`; g.fillText(sub, 24 + g.measureText(title).width + 90, 24); }
+      y = 36;
+    }
+    let x = 14; const xs = cols.map(([, cw]) => { const a = x; x += cw; return a; });
+    if (hl >= 0) { g.fillStyle = 'rgba(217,101,59,0.14)'; g.fillRect(xs[hl] - 4, y, cols[hl][1], h - y - (note ? 22 : 6)); }
+    g.fillStyle = '#2a2e36'; g.fillRect(10, y, w - 20, 22);
+    g.font = `600 11px ${MONO}`;
+    cols.forEach(([n], i) => { g.fillStyle = i === hl ? hlCol : '#c3a273'; g.fillText(n, xs[i], y + 15); });
+    y += 22;
+    g.font = `11px ${MONO}`;
+    rows.forEach((r, ri) => {
+      g.fillStyle = ri % 2 ? '#20232a' : '#1c1f25'; g.fillRect(10, y, w - 20, 21);
+      r.forEach((c, i) => {
+        const cw = cols[i][1] - 8; let s = String(c);
+        g.fillStyle = i === hl ? '#e8a07f' : '#b9bcc4';
+        while (g.measureText(s).width > cw && s.length > 2) s = s.slice(0, -2) + '…';
+        g.fillText(s, xs[i], y + 14);
+      });
+      y += 21;
+    });
+    if (note) { g.fillStyle = '#7d828c'; g.font = `italic 10.5px ${FONT}`; g.fillText(note, 14, h - 8); }
+  });
+}
+
+/** Text card texture with optional highlighted ranges. parts: [[text, color|null, bg|null]] wrapped. */
+export function cardTex(key, { title = '', parts, w = 300, h = 170, foot = '', accent = '#d9653b' }) {
+  return screenTex(key, w, h, (g) => {
+    g.fillStyle = '#e4e1da'; g.fillRect(0, 0, w, h);
+    g.fillStyle = accent; g.fillRect(0, 0, 5, h);
+    let y = 22;
+    if (title) { g.fillStyle = '#2b2e35'; g.font = `700 12px ${FONT}`; g.fillText(title, 16, y); y += 20; }
+    g.font = `12px ${FONT}`;
+    let x = 16; const lh = 16, maxX = w - 14;
+    for (const [txt, col, bg] of parts) {
+      for (const word of txt.split(/(\s+)/)) {
+        if (!word) continue;
+        const ww = g.measureText(word).width;
+        if (x + ww > maxX && word.trim()) { x = 16; y += lh; }
+        if (!word.trim() && x === 16) continue;
+        if (bg) { g.fillStyle = bg; g.fillRect(x - 1, y - 12, ww + 2, 15); }
+        g.fillStyle = col || '#2b2e35'; g.fillText(word, x, y); x += ww;
+      }
+    }
+    if (foot) { g.fillStyle = '#6d727c'; g.font = `10.5px ${MONO}`; g.fillText(foot, 16, h - 10); }
+  });
+}
+
+/** A Delta table as a stack of slabs (Parquet files) with a panel face. */
+export function deltaSlab(w = 2.4, d = 1.4, n = 4, color = 0x4a4f58) {
+  const g = new THREE.Group(); g.slabs = [];
+  for (let i = 0; i < n; i++) {
+    const s = new THREE.Mesh(roundedBox(w, 0.16, d, 0.04), matte(i === n - 1 ? 0x3a3f48 : color, 0.55));
+    s.position.y = 0.1 + i * 0.2; g.add(s); g.slabs.push(s);
+    const e = new THREE.Mesh(new THREE.BoxGeometry(w * 0.98, 0.012, 0.012), glow(COL.lava, 0.8)); e.position.set(0, 0.1 + i * 0.2 + 0.04, d / 2 + 0.002); g.add(e);
+  }
+  g.top = 0.1 + (n - 1) * 0.2 + 0.08;
+  return g;
+}
+
+/** Layered HNSW-style graph. Returns group with .nodes (per layer arrays of Vector3) and .mesh refs. */
+export function hnswGraph({ layers = 3, counts = [5, 12, 26], w = 3.2, d = 2.2, gap = 0.9, seed = 7, color = 0x8aa4ba } = {}) {
+  const g = new THREE.Group(); g.lv = [];
+  let s = seed; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const nodeGeo = new THREE.SphereGeometry(0.055, 12, 8);
+  for (let L = 0; L < layers; L++) {
+    const y = (layers - 1 - L) * gap;
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.4, d + 0.4), frost(0x5b6470, 0.1, { side: THREE.DoubleSide }));
+    plane.rotation.x = -Math.PI / 2; plane.position.y = y; g.add(plane);
+    const pts = [];
+    for (let i = 0; i < counts[L]; i++) pts.push(new THREE.Vector3((rnd() - 0.5) * w, y, (rnd() - 0.5) * d));
+    const mats = pts.map((p) => { const m = new THREE.Mesh(nodeGeo, L === layers - 1 ? matte(0xb9bcc4, 0.5) : glow(color, 1)); m.position.copy(p); g.add(m); return m; });
+    const seg = [];
+    pts.forEach((p, i) => {
+      const near = pts.map((q, j) => [q.distanceTo(p), j]).filter(([, j]) => j !== i).sort((a, b) => a[0] - b[0]).slice(0, 2);
+      near.forEach(([, j]) => { if (j > i) seg.push(p.x, p.y, p.z, pts[j].x, pts[j].y, pts[j].z); });
+    });
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+    const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.35 })); g.add(lines);
+    g.lv.push({ y, pts, mats, plane });
+  }
+  return g;
+}
+
+/** Cloud object-storage bucket (open cylinder). */
+export function bucket(r = 1.1, h = 1.5) {
+  const g = new THREE.Group();
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.86, h, 48, 1, true), frost(0x8aa4ba, 0.22, { side: THREE.DoubleSide })); wall.position.y = h / 2; g.add(wall);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.86, r * 0.86, 0.08, 48), matte(0x3a3f48, 0.5)); base.position.y = 0.04; g.add(base);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(r, 0.03, 8, 96), metal(0x8a8f99, 0.35, 0.7)); rim.rotation.x = Math.PI / 2; rim.position.y = h; g.add(rim);
+  g.wall = wall; g.h = h; return g;
+}
+
+/** Embedding model: stack of translucent layer plates with a glowing core. */
+export function modelStack(n = 5, w = 1.2, color = COL.violet) {
+  const g = new THREE.Group(); g.plates = [];
+  for (let i = 0; i < n; i++) {
+    const p = new THREE.Mesh(roundedBox(w, 0.08, w, 0.04), frost(color, 0.4)); p.position.y = 0.2 + i * 0.22; g.add(p); g.plates.push(p);
+    p.add(edgeLines(p.geometry, color, 1.2, 0.6));
+  }
+  g.core = new THREE.Mesh(new THREE.IcosahedronGeometry(w * 0.18, 1), glow(color, 1.8)); g.core.position.y = 0.2 + (n - 1) * 0.11; g.add(g.core);
+  g.h = 0.2 + n * 0.22; return g;
+}
+
+/** Signed bar strip (an embedding vector). values in [-1, 1]. */
+export function vectorStrip(values, { w = 4, maxH = 0.6, color = COL.lava, neg = COL.cyan } = {}) {
+  const g = new THREE.Group(); g.bars = [];
+  const gap = w / values.length, geo = new THREE.BoxGeometry(gap * 0.6, 1, 0.08);
+  const mp = glow(color, 1.1), mn = glow(neg, 0.9);
+  values.forEach((v, i) => {
+    const b = new THREE.Mesh(geo, v >= 0 ? mp : mn); b.position.x = -w / 2 + gap * (i + 0.5); g.add(b); g.bars.push(b); b.userData.v = v;
+  });
+  const axis = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, 0.01, 0.01), matte(0x8d929b, 0.5)); g.add(axis);
+  g.set = (k) => g.bars.forEach((b) => { const hh = Math.max(0.002, Math.abs(b.userData.v) * maxH * k); b.scale.y = hh; b.position.y = Math.sign(b.userData.v) * hh / 2; });
+  return g;
+}
+
+/** Deterministic pseudo-random vector. */
+export function fakeVec(n, seed = 1) { let s = seed * 9301 + 49297; return Array.from({ length: n }, () => { s = (s * 16807) % 2147483647; const u = s / 2147483647; return (u - 0.5) * 2 * (0.35 + 0.65 * Math.abs(Math.sin(u * 12))); }); }
