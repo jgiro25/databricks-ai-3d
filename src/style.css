@@ -64,7 +64,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .step-count{font:500 12px var(--m);color:var(--mute);padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel)}
 .step-count b{color:var(--ink);font-size:14px;margin-right:4px;font-weight:600}
 
-.card{position:absolute;left:clamp(14px,2.5vw,28px);top:max(76px,calc(50vh - 290px));max-height:calc(100vh - 76px - 150px);overflow-y:auto;scrollbar-width:thin;width:min(360px,31vw);padding:20px 20px 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px -28px rgba(0,0,0,.7);transition:opacity .35s}
+.card{position:absolute;left:clamp(14px,2.5vw,28px);top:max(76px,calc(50vh - 290px));max-height:calc(100vh - max(76px,calc(50vh - 290px)) - 168px);overflow-y:auto;scrollbar-width:thin;width:min(360px,31vw);padding:20px 20px 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 24px 60px -28px rgba(0,0,0,.7);transition:opacity .35s}
 body.panel-open .card{opacity:0!important;pointer-events:none}
 .card-step{display:flex;justify-content:space-between;align-items:center;font:500 11px var(--m);letter-spacing:.1em;color:var(--dim)}
 .phase{padding:2px 8px;border-radius:5px;color:var(--accent2);background:var(--accent-bg);border:1px solid var(--accent-line);letter-spacing:.08em}

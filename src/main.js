@@ -7,25 +7,14 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { USE_CASES, STEPS, PHASES } from './data.js';
-import { DEEP_A } from './content/deep1.js';
-import { DEEP_B } from './content/deep2.js';
-import { OBJECTS } from './content/objects.js';
+import { USE_CASES } from './data.js';
+import { CASES } from './cases.js';
 import { COL, E, glow } from './helpers.js';
 import { Station, shown } from './stations/base.js';
-import { NeedStation } from './stations/s0_need.js';
-import { GoalStation } from './stations/s1_goal.js';
-import { IngestStation } from './stations/s2_ingest.js';
-import { ChunkStation } from './stations/s3_chunk.js';
-import { EmbedStation } from './stations/s4_embed.js';
-import { IndexStation } from './stations/s5_index.js';
-import { RetrieveStation } from './stations/s6_retrieve.js';
-import { GenerateStation } from './stations/s7_generate.js';
-import { EvaluateStation } from './stations/s8_evaluate.js';
-import { DeployStation } from './stations/s9_deploy.js';
 
-const DEEP = [...DEEP_A, ...DEEP_B];
-const N = STEPS.length;
+// active use case (swapped by setCase)
+let caseId = 'rag', CASE = CASES.rag, STEPS = CASE.steps, PHASES = CASE.phases, DEEP = CASE.deep, OBJECTS = CASE.objects;
+const N = 10; // every case has 10 stations (00–09) on the same rail
 const $ = (s) => document.querySelector(s);
 const isMobile = matchMedia('(pointer:coarse)').matches || innerWidth < 820;
 const params = new URLSearchParams(location.search);
@@ -126,16 +115,23 @@ const beads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.06, 12, 8), glo
 beads.frustumCulled = false; scene.add(beads);
 const _bm = new THREE.Matrix4(), _bp = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bs = new THREE.Vector3(1, 1, 1);
 
-// stations
-const CLASSES = [NeedStation, GoalStation, IngestStation, ChunkStation, EmbedStation, IndexStation, RetrieveStation, GenerateStation, EvaluateStation, DeployStation];
-const stations = CLASSES.map((C, i) => { const s = new C(); s.group.position.copy(stationPos(i)); scene.add(s.group); return s; });
-// shadows: opaque meshes cast + receive
-stations.forEach((s) => s.group.traverse((o) => {
-  if (!o.isMesh || o.userData.noShadow || o.userData.hit) return;
-  const mats = Array.isArray(o.material) ? o.material : [o.material];
-  const opaque = mats.every((m) => !m.transparent && !m.isShaderMaterial);
-  o.castShadow = opaque; o.receiveShadow = true;
-}));
+// stations: one world per use case, built lazily, only the active one is visible
+const worlds = {};
+function buildWorld(id) {
+  if (worlds[id]) return worlds[id];
+  const grp = new THREE.Group(); grp.name = 'world-' + id; scene.add(grp);
+  const list = CASES[id].classes.map((C, i) => { const st = new C(); st.group.position.copy(stationPos(i)); grp.add(st.group); return st; });
+  // shadows: opaque meshes cast + receive
+  list.forEach((st) => st.group.traverse((o) => {
+    if (!o.isMesh || o.userData.noShadow || o.userData.hit) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    const opaque = mats.every((m) => !m.transparent && !m.isShaderMaterial);
+    o.castShadow = opaque; o.receiveShadow = true;
+  }));
+  worlds[id] = { grp, stations: list };
+  return worlds[id];
+}
+let stations = buildWorld('rag').stations;
 
 // ---------- camera rig ----------
 const rig = { pos: new THREE.Vector3(-16, 9, 22), target: new THREE.Vector3(34, 1, -6) };
@@ -190,14 +186,16 @@ USE_CASES.forEach((u, i) => {
   el.className = 'tile ' + (u.live ? 'live' : 'locked');
   el.innerHTML = `<div><div class="n">${pad(u.n)}</div><h3>${u.t}</h3>${u.live ? `<p class="sub">${u.sub}</p>` : ''}</div>
     ${u.live ? '<span class="go">Explore in 3D <b>→</b></span>' : `<div class="k"><span class="cat">${u.cat}</span><span class="soon">Coming soon</span></div>`}`;
-  if (u.live) el.addEventListener('click', () => openCase(0));
+  if (u.live) { el.dataset.case = u.case; el.addEventListener('click', () => openCase(u.case, 0)); }
   gridEl.appendChild(el);
   setTimeout(() => el.classList.add('in'), 250 + i * 30);
 });
 
 const map = $('#map');
-const nodes = [];
-PHASES.forEach((ph) => {
+let nodes = [];
+function buildMap() {
+  map.innerHTML = ''; nodes = [];
+  PHASES.forEach((ph) => {
   const grp = document.createElement('div'); grp.className = 'phase-grp';
   grp.innerHTML = `<div class="phase-lbl">${ph.name}</div><div class="phase-nodes"></div>`;
   ph.steps.forEach((si) => {
@@ -208,7 +206,23 @@ PHASES.forEach((ph) => {
     grp.querySelector('.phase-nodes').appendChild(n); nodes[si] = n;
   });
   map.appendChild(grp);
-});
+  });
+}
+buildMap();
+function setCase(id) {
+  if (!CASES[id]) id = 'rag';
+  if (id === caseId && worlds[id]) return;
+  for (const k in worlds) { worlds[k].grp.visible = false; worlds[k].stations.forEach((st) => { gsap.killTweensOf(st); st.focus = 0; }); }
+  const w = buildWorld(id); w.grp.visible = true;
+  if (id !== caseId) renderer.compile(scene, camera);
+  caseId = id; CASE = CASES[id]; STEPS = CASE.steps; PHASES = CASE.phases; DEEP = CASE.deep; OBJECTS = CASE.objects;
+  stations = w.stations;
+  stations.forEach((st) => { st.focus = 0; });
+  buildMap();
+  $('#ucNum').textContent = pad(CASE.n); $('#ucName').textContent = CASE.title;
+  $('#stepTot').textContent = '/ ' + pad(N - 1);
+  document.body.dataset.case = id;
+}
 
 function renderCard(i) {
   const s = STEPS[i];
@@ -233,9 +247,9 @@ function renderCard(i) {
 
 // ---------- syntax highlighter (sql / py / sh) ----------
 const KW = {
-  sql: new Set('SELECT FROM WHERE CREATE OR REPLACE TABLE VOLUME AS AND INSERT INTO LATERAL ALTER SET TBLPROPERTIES GRANT ON TO USE CATALOG SCHEMA DESCRIBE HISTORY LIMIT ORDER BY GROUP JOIN STRING INT BIGINT NULL TRUE FALSE WITH IF NOT EXISTS DESC ASC IN IS CASE WHEN THEN ELSE END MERGE USING MATCHED UPDATE VALUES DISTINCT INTERVAL HOUR DAY ARRAY MAP STRUCT VARIANT BINARY TIMESTAMP DOUBLE FLOAT BOOLEAN'.split(' ')),
+  sql: new Set('SELECT FROM WHERE CREATE OR REPLACE TABLE VOLUME AS AND INSERT INTO LATERAL ALTER SET TBLPROPERTIES GRANT ON TO USE CATALOG SCHEMA DESCRIBE HISTORY LIMIT ORDER BY GROUP JOIN STRING INT BIGINT NULL TRUE FALSE WITH IF NOT EXISTS DESC ASC IN IS CASE WHEN THEN ELSE END MERGE USING MATCHED UPDATE VALUES DISTINCT INTERVAL HOUR DAY ARRAY MAP STRUCT VARIANT BINARY TIMESTAMP DOUBLE FLOAT BOOLEAN FUNCTION RETURN RETURNS ROW FILTER MASK COLUMN CONSTRAINT PRIMARY KEY FOREIGN REFERENCES COMMENT METRICS LANGUAGE YAML VIEW STREAMING MATERIALIZED REFRESH STREAM EXPECT VIOLATION DROP ADD DATE DECIMAL BETWEEN ALL ILIKE LIKE ALTER'.split(' ')),
   py: new Set('from import def return for in if else elif with as None True False lambda class not and or is try except raise while print'.split(' ')),
-  sh: new Set('pip install databricks fs cp agentbricks init dev deploy deployments logs get stop list export cd'.split(' ')),
+  sh: new Set('pip install databricks fs cp agentbricks init dev deploy deployments logs get stop list export cd curl genie'.split(' ')),
 };
 function hl(src, lang) {
   const cm = lang === 'sql' ? '--[^\\n]*' : '#[^\\n]*';
@@ -346,9 +360,10 @@ function go(i, opts = {}) {
   renderCard(i);
   setHover(null);
   if (panelOpen && panelState) { if (panelState.type === 'step') openStep(i); else closePanel(); }
-  history.replaceState(null, '', location.pathname + location.search + '#/rag/' + i);
+  history.replaceState(null, '', location.pathname + location.search + '#/' + caseId + '/' + i);
 }
-function openCase(i = 0, instant = false) {
+function openCase(id = 'rag', i = 0, instant = false) {
+  setCase(id);
   mode = 'case';
   applyViewOffset(true);
   $('#hud').classList.remove('hidden');
@@ -375,7 +390,7 @@ $('#btnNext').addEventListener('click', () => { frozen = false; go(cur + 1); });
 $('#btnPrev').addEventListener('click', () => go(cur - 1));
 $('#btnPlay').addEventListener('click', () => setPlay(!playing));
 addEventListener('keydown', (e) => {
-  if (mode !== 'case') { if (e.key === 'Enter') openCase(0); return; }
+  if (mode !== 'case') { if (e.key === 'Enter') openCase('rag', 0); return; }
   if (e.key === 'Escape') { if (panelOpen) closePanel(); else openHome(); return; }
   if (e.target.closest && e.target.closest('#panel')) return;
   if (e.key === 'ArrowRight') go(cur + 1);
@@ -500,9 +515,27 @@ function frame() {
   }
   composer.render();
   labelRenderer.render(scene, camera);
+  if (innerWidth < 820 && mode === 'case' && stations[cur]) clampLabels(stations[cur]);
   requestAnimationFrame(frame);
 }
 
+// keep 3D labels inside the screen on narrow viewports (they are centred on their anchor and would be cut off)
+const _lv = new THREE.Vector3();
+function clampLabels(st) {
+  const W = innerWidth, M = 6;
+  for (const l of st.labels) {
+    const el = l.element;
+    if (!l.visible || el.style.display === 'none') { if (el._dx) { el.style.translate = ''; el._dx = 0; } continue; }
+    const w = el.offsetWidth; if (!w) continue;
+    l.getWorldPosition(_lv).project(camera);
+    const x = (_lv.x * 0.5 + 0.5) * W;
+    const left = x - w * l.center.x, right = left + w;
+    let dx = 0;
+    if (left < M) dx = M - left; else if (right > W - M) dx = W - M - right;
+    dx = Math.round(dx);
+    if (dx !== (el._dx || 0)) { el.style.translate = dx ? dx + 'px 0' : ''; el._dx = dx; }
+  }
+}
 function resize() {
   const w = innerWidth, h = innerHeight;
   camera.aspect = w / h; camera.fov = w / h < 1 ? 52 : 42; camera.updateProjectionMatrix();
@@ -514,12 +547,12 @@ addEventListener('resize', resize);
 
 // boot
 resize();
-const m = location.hash.match(/#\/rag\/(\d+)/);
+const m = location.hash.match(/#\/(rag|genie)\/(\d+)/);
 const shotT = parseFloat(params.get('t'));
 frozen = !isNaN(shotT) && !!m;
 gsap.ticker.lagSmoothing(frozen ? 0 : 2000, 50); // slow GPUs: let UI tweens finish in real time
 if (m) {
-  openCase(Math.max(0, Math.min(N - 1, parseInt(m[1], 10))), true);
+  openCase(m[1], Math.max(0, Math.min(N - 1, parseInt(m[2], 10))), true);
   if (!isNaN(shotT)) { stations[cur].reset(0); stations[cur].local = shotT; gsap.killTweensOf(stations[cur]); stations[cur].focus = 1; }
   if (params.get('deep')) openStep(cur);
   if (params.get('obj')) openObject(params.get('obj'));
@@ -529,4 +562,4 @@ canvas.style.cursor = 'grab';
 renderer.compile(scene, camera);
 requestAnimationFrame(frame);
 setTimeout(() => { $('#loader').style.opacity = 0; setTimeout(() => $('#loader').remove(), 900); }, 600);
-window.__app = { go, openCase, openHome, openStep, openObject, closePanel, stations, setPlay, pickAt, camera };
+window.__app = { go, openCase, openHome, openStep, openObject, closePanel, setPlay, pickAt, camera, get stations() { return stations; }, get caseId() { return caseId; } };

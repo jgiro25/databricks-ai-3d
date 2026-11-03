@@ -1,7 +1,7 @@
 // Use case catalog + step content for the RAG use case.
 export const USE_CASES = [
-  { n: 1, t: 'Document Q&A with RAG', cat: 'GenAI', live: true, sub: 'Chat with provider contracts & policy PDFs, with citations' },
-  { n: 2, t: 'Talk to your data with Genie', cat: 'Text-to-SQL' },
+  { n: 1, t: 'Document Q&A with RAG', cat: 'GenAI', live: true, case: 'rag', sub: 'Chat with provider contracts & policy PDFs, with citations' },
+  { n: 2, t: 'Talk to your data with Genie', cat: 'Text-to-SQL', live: true, case: 'genie', sub: 'Ask claims questions in plain English, get governed SQL, charts and answers' },
   { n: 3, t: 'AI Functions inside SQL', cat: 'SQL + LLM' },
   { n: 4, t: 'Claims anomaly detection', cat: 'ML' },
   { n: 5, t: 'Member churn prediction', cat: 'ML' },

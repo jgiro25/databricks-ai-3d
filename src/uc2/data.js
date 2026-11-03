@@ -1,0 +1,106 @@
+// Use case 02 · Talk to your data with Genie (Genie Agents, formerly Genie spaces)
+export const PHASES2 = [
+  { name: 'Need', steps: [0] },
+  { name: 'Goal', steps: [1] },
+  { name: 'Prepare data', steps: [2, 3, 4] },
+  { name: 'Build agent', steps: [5] },
+  { name: 'Answer', steps: [6, 7] },
+  { name: 'Production', steps: [8, 9] },
+];
+
+const I = {
+  need: '<path d="M4 7h7v10H4zM13 7h7v10h-7z"/><path d="M11 12h2"/>',
+  goal: '<path d="M4 5h16v10H9l-5 4z"/><path d="M8 10h8"/>',
+  curate: '<path d="M3 7h18M5 12h14M8 17h8"/>',
+  describe: '<path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6M8 14h8M8 17h5"/>',
+  metrics: '<circle cx="12" cy="13" r="7"/><path d="M12 13l4-4M8 4h8"/>',
+  agent: '<rect x="5" y="5" width="14" height="14" rx="4"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  ask: '<path d="M4 18V8M9 18V4M14 18v-7M19 18v-4"/><path d="M3 21h18"/>',
+  govern: '<path d="M12 3l8 4v5c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V7z"/><path d="M8 12h8M10 15h4"/>',
+  bench: '<path d="M5 12l4 4 10-10"/><path d="M5 20h14"/>',
+  share: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.3 10.8l7.4-3.6M8.3 13.2l7.4 3.6"/>',
+};
+
+export const STEPS2 = [
+  {
+    key: 'need', short: 'Need', phase: 'Need', icon: I.need,
+    title: 'Business need → developer solution',
+    split: {
+      need: ['Claims-ops managers have data questions every day: denial rates, paid amounts, backlog by state.', 'Each one becomes a ticket for the BI team. A new answer takes 3–5 days, and “denial rate” is computed three different ways.', 'Answers must use the official metric definitions, and each manager may only see their own region’s members.'],
+      solution: ['A <b>Genie Agent</b> (formerly Genie space): managers ask in English and get SQL, a table, a chart and a summary.', 'Clean Gold tables are built with Lakeflow pipelines, then described in Unity Catalog. Metrics are defined once in a metric view.', 'Example SQL and trusted functions teach Genie. Row filters and column masks enforce access per user. Benchmarks measure accuracy before you share it.'],
+    },
+    tags: [['Genie Agents', 'tool'], ['Unity Catalog', 'tool'], ['Metric views', 'tool'], ['Serverless SQL warehouse', 'tool'], ['Lakeflow', 'tool']],
+  },
+  {
+    key: 'goal', short: 'Goal', phase: 'Goal', icon: I.goal,
+    title: 'Ask in English. Get SQL, a chart and a summary.',
+    what: 'A manager types a business question. No SQL, no ticket',
+    how: 'Genie writes a <b>read-only SQL query</b> from your curated context and runs it on a SQL warehouse',
+    why: 'Answers in seconds. The SQL is always visible, so anyone can check it',
+    tags: [['Text-to-SQL', ''], ['Chat mode', ''], ['Compound AI system', 'model']],
+  },
+  {
+    key: 'curate', short: 'Gold tables', phase: 'Prepare data', icon: I.curate,
+    title: 'Build clean, analysis-ready Gold tables',
+    what: 'Turn raw claim feeds into a small, clean star schema: one fact table and a few dimensions',
+    how: '<code>Lakeflow Spark Declarative Pipelines</code>: bronze → silver (expectations) → gold materialized views',
+    why: 'Genie works best on ≤5 focused, pre-joined tables, not 200 raw ones',
+    tags: [['Lakeflow Declarative Pipelines', 'tool'], ['Delta Lake', 'tool'], ['Medallion', '']],
+  },
+  {
+    key: 'describe', short: 'Describe', phase: 'Prepare data', icon: I.describe,
+    title: 'Describe every table, column and key',
+    what: 'Add plain-English comments and declare how tables join',
+    how: '<code>COMMENT ON</code> / AI-generated descriptions · <code>PRIMARY KEY</code> / <code>FOREIGN KEY</code> constraints',
+    why: 'Genie reads this metadata to pick the right columns and joins',
+    tags: [['Unity Catalog metadata', 'tool'], ['AI-generated comments', 'model'], ['PK / FK', '']],
+  },
+  {
+    key: 'metrics', short: 'Metrics', phase: 'Prepare data', icon: I.metrics,
+    title: 'Define the business metrics once',
+    what: 'Write “denial rate”, “total paid” and “claims per member” as governed formulas',
+    how: 'A UC <code>metric view</code> (YAML: dimensions + measures), queried with <code>MEASURE()</code>',
+    why: 'Every answer uses the same official definition, no matter how it is asked',
+    tags: [['Metric views', 'tool'], ['MEASURE()', ''], ['Semantic layer', '']],
+  },
+  {
+    key: 'agent', short: 'Genie Agent', phase: 'Build agent', icon: I.agent,
+    title: 'Assemble and teach the Genie Agent',
+    what: 'Pick the tables, a SQL warehouse, then add examples, SQL expressions and instructions',
+    how: 'Genie Agent → <code>Configure</code>: data, knowledge store, example SQL, <b>trusted</b> UC functions',
+    why: 'This curated context is what turns a generic LLM into your claims analyst',
+    tags: [['Genie Agent', 'tool'], ['Serverless SQL', 'tool'], ['Knowledge store', ''], ['Trusted assets', '']],
+  },
+  {
+    key: 'ask', short: 'Ask', phase: 'Answer', icon: I.ask,
+    title: 'Question → context → SQL → chart',
+    what: 'The question is matched to context, turned into SQL, run, and visualized',
+    how: 'Genie selects metadata + examples, the LLM writes SQL, the warehouse runs it',
+    why: 'Each answer shows its SQL, so people can verify and build on it',
+    tags: [['Managed LLMs', 'model'], ['SQL warehouse', 'tool'], ['Agent mode', '']],
+  },
+  {
+    key: 'govern', short: 'Govern', phase: 'Answer', icon: I.govern,
+    title: 'Same question, different rows per user',
+    what: 'Two managers ask the same thing. Each sees only their own region',
+    how: 'Data access runs as the <b>end user</b>: UC <code>ROW FILTER</code> and column <code>MASK</code> apply',
+    why: 'No separate security model for AI. Unity Catalog already governs it',
+    tags: [['Row filters', 'tool'], ['Column masks', 'tool'], ['Query history', '']],
+  },
+  {
+    key: 'bench', short: 'Benchmark', phase: 'Production', icon: I.bench,
+    title: 'Measure accuracy before you share',
+    what: 'Run real questions with known-correct SQL and score every answer',
+    how: 'Genie <code>Benchmarks</code>: result sets compared to ground-truth SQL · Monitor tab · feedback',
+    why: 'Accuracy becomes a number you can track after every change',
+    tags: [['Benchmarks', 'tool'], ['Monitor tab', 'tool'], ['Feedback', '']],
+  },
+  {
+    key: 'share', short: 'Share', phase: 'Production', icon: I.share,
+    title: 'Put it where people already work',
+    what: 'Share the agent in Genie One, Teams, an app, or call it from code and other agents',
+    how: '<code>CAN RUN</code> sharing · Conversation API · iframe embed · Genie Agent MCP server',
+    why: 'One governed agent, many front doors',
+    tags: [['Genie One', 'tool'], ['Conversation API', 'tool'], ['Managed MCP', 'tool']],
+  },
+];
